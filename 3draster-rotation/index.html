@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<!--
+  3D Model Attribution:
+
+  "Horse Skull" by RISD Nature Lab
+  https://sketchfab.com/3d-models/horse-skull-0834c74e6b744f5999af04ad681dc73f
+  Licensed under CC-BY-4.0 · https://creativecommons.org/licenses/by/4.0/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Home | DDT</title>
+  <meta name="description" content="Don Ario — Designer from South Tangerang. UX/UI, Branding, Visual Content.">
+
+  <!-- Favicon -->
+  <link rel="icon" href="Favicon/Dark.png"  type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="Favicon/Light.png" type="image/png" media="(prefers-color-scheme: dark)">
+
+  <!-- OG / Social sharing -->
+  <meta property="og:title"       content="Home | DDT">
+  <meta property="og:description" content="Designer from South Tangerang. UX/UI, Branding, Visual Content.">
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://dondothat.lol/">
+  <meta property="og:image"       content="https://dondothat.lol/og-image.jpg">
+  <meta property="og:image:width"  content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="Home | DDT">
+  <meta name="twitter:description" content="Designer from South Tangerang. UX/UI, Branding, Visual Content.">
+  <meta name="twitter:image"       content="https://dondothat.lol/og-image.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════
+       RESET
+    ═══════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ═══════════════════════════════════════
+       TOKENS
+    ═══════════════════════════════════════ */
+    :root {
+      --c-bg:     #ffffff;
+      --c-border: #becdda;
+      --c-text:   #12191f;
+      --fill-0:   #12191f;
+      --pad:      14px;
+    }
+
+    /* ═══════════════════════════════════════
+       BASE
+    ═══════════════════════════════════════ */
+    html { height: 100%; overflow: hidden; overscroll-behavior: none; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-optical-sizing: auto;
+      font-variation-settings: 'opsz' 14;
+      font-weight: 600;
+      background: var(--c-bg);
+      color: var(--c-text);
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none; /* remove elastic bounce on iOS */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; }
+
+    /* ═══════════════════════════════════════
+       PAGE LOADER
+    ═══════════════════════════════════════ */
+    #page-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #12191f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #page-loader.exit {
+      transform: translateY(-100%);
+      transition: transform 0.85s cubic-bezier(0.76, 0, 0.24, 1);
+      pointer-events: none;
+    }
+    #loader-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    /* ═══════════════════════════════════════
+       GRAIN OVERLAY
+    ═══════════════════════════════════════ */
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 800;
+      pointer-events: none;
+      opacity: 0.032;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 220px 220px;
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE SHELL
+    ═══════════════════════════════════════ */
+    .page {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    /* ═══════════════════════════════════════
+       NAV
+    ═══════════════════════════════════════ */
+    .nav {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--pad);
+      background: var(--c-bg);
+      font-size: 12px;
+      line-height: normal;
+      white-space: nowrap;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    /* Border fill L→R */
+    .nav::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 0; height: 1px;
+      background: var(--c-border);
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .nav.visible::after { width: 100%; }
+
+    /* Logo icon */
+    .nav-logo {
+      width: 13px;
+      height: 14px;
+      flex-shrink: 0;
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .nav-logo.visible { opacity: 1; transform: translateY(0); }
+
+    /* Menu */
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: var(--pad);
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .nav-menu.visible { opacity: 1; transform: translateY(0); }
+
+    /* Nav links — char-roll slots */
+    .nav-link {
+      position: relative;
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════
+       SECTION — center column
+    ═══════════════════════════════════════ */
+    .section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-height: 0;
+      padding: var(--pad);
+    }
+
+    /* Flexible spacers between wordmark / reel / content.
+       They grow freely but guarantee a 48px minimum gap.
+       If the viewport is too short, the reel shrinks first (see .reel). */
+    .gap {
+      flex: 1 0 48px;
+    }
+
+    /* ═══════════════════════════════════════
+       WORDMARK — full width SVG
+    ═══════════════════════════════════════ */
+    .wordmark {
+      width: 100%;
+      flex-shrink: 0;
+      overflow: hidden;
+      contain: paint;
+      clip-path: inset(0); /* force hardware clip — most reliable for CSS-transformed SVG children on iOS Safari */
+    }
+
+    .wordmark-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: hidden; /* SVG clips its own transformed children — more reliable than parent div on iOS Safari */
+    }
+
+    /* Per-letter stagger.
+       SVG container height ≈ 12.4vw. 30vw gives ~17.6vw of safety margin
+       so letters are fully below the clip on all screen sizes incl. mobile. */
+    .wm-letter {
+      transform: translateY(30vw);
+      opacity: 0;
+      transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                  opacity 0.4s ease;
+    }
+    .wm-letter.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* ═══════════════════════════════════════
+       SKULL — 3D interactive hero
+    ═══════════════════════════════════════ */
+    .skull-stage {
+      aspect-ratio: 4/3;
+      height: clamp(200px, 38vh, 440px);
+      width: auto;
+      position: relative;
+      flex-shrink: 1;
+      cursor: grab;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.85s ease, transform 0.85s ease;
+    }
+    .skull-stage.visible { opacity: 1; transform: translateY(0); }
+    .skull-stage:active { cursor: grabbing; }
+    #skull-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ═══════════════════════════════════════
+       CONTENT — centered bottom
+    ═══════════════════════════════════════ */
+    .content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--pad);
+      width: 100%;
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .copy {
+      display: flex;
+      flex-direction: column;
+      gap: var(--pad);
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Headline line-reveal
+       min(5vw, 4.8vh) responds to both dimensions so 3 lines
+       stay compact on short viewports without a media query */
+    .headline {
+      font-size: clamp(20px, min(5vw, 4.8vh), 40px);
+      font-weight: 600;
+      text-transform: uppercase;
+      line-height: 1;
+      font-variation-settings: 'opsz' 32;
+    }
+
+    .line-wrap {
+      display: block;
+      overflow: hidden;
+      padding-bottom: 0.05em;
+    }
+
+    .line-inner {
+      display: block;
+      transform: translateY(108%);
+      transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .line-inner.visible { transform: translateY(0); }
+
+    /* Bio */
+    .bio {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+      max-width: 462px;
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.75s ease, transform 0.75s ease;
+    }
+    .bio.visible { opacity: 1; transform: translateY(0); }
+
+    /* Social links */
+    .links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--pad);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: normal;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .links.visible { opacity: 1; transform: translateY(0); }
+
+    /* Social links — char-roll */
+    .social-link {
+      position: relative;
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+    }
+
+    /* ── Per-character roll slot (nav + social links) ── */
+    .char-slot {
+      display: inline-block;
+      overflow: hidden;
+      height: 1em;
+      line-height: 1;
+      vertical-align: top;
+    }
+    .char-a, .char-b {
+      display: block;
+      line-height: 1;
+    }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 640px) {
+      .bio { max-width: 100%; }
+      .content { max-width: 100%; }
+      .links { gap: 10px; }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Page loader -->
+  <div id="page-loader">
+    <span id="loader-text">Just a moment</span>
+  </div>
+
+  <!-- Grain -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="page">
+
+    <!-- ───── Nav ───── -->
+    <nav class="nav" id="nav" aria-label="Main navigation">
+
+      <!-- Logo mark -->
+      <div class="nav-logo" id="nav-logo">
+        <svg viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="DONDOTHAT" role="img" style="width:13px;height:14px;display:block;">
+          <path d="M13 7.35762V11.4703H7.78495V10.884C7.70558 10.3628 7.26221 9.96356 6.72579 9.96356H5.44084C4.52263 9.96356 3.77821 9.20812 3.77821 8.27802V8.17545C3.70021 7.65426 3.25547 7.25505 2.72042 7.25505H0V0.63901C0 0.285545 0.281896 0 0.629475 0H3.55242C4.47063 0 5.21505 0.755446 5.21505 1.68554V1.63564C5.21505 2.17762 5.60779 2.62812 6.12232 2.70852H7.33063C8.24884 2.70852 8.99326 3.46257 8.99326 4.39406V4.59921C8.99326 5.14119 9.38737 5.59168 9.9019 5.67208H11.3374C12.2556 5.67208 13 6.42614 13 7.35762Z" fill="#12191F"/>
+          <path d="M7.78495 11.9305H13V14H7.78495V11.9305Z" fill="#12191F"/>
+        </svg>
+      </div>
+
+      <!-- Menu -->
+      <div class="nav-menu" id="nav-menu">
+        <a href="work.html" class="nav-link">Index</a>
+        <a href="curriculum.html" class="nav-link">Curriculum</a>
+      </div>
+    </nav>
+
+    <!-- ───── Section ───── -->
+    <main class="section">
+
+      <!-- DONDOTHAT wordmark — full width, letters animate individually -->
+      <div class="wordmark" id="wordmark" aria-label="DONDOTHAT">
+        <svg class="wordmark-svg" viewBox="0 0 1412 175.204" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- D -->
+          <path class="wm-letter" d="M57.3002 172.47H0V2.73401H58.5533C75.413 2.73401 89.9564 6.18949 102.183 13.1004C114.411 19.9355 123.828 29.6943 130.435 42.3771C137.042 54.9839 140.346 69.983 140.346 87.3743C140.346 104.917 137.042 120.068 130.435 132.827C123.828 145.51 114.297 155.307 101.842 162.218C89.4627 169.053 74.6156 172.47 57.3002 172.47ZM30.0741 146.725H55.7054C74.1599 146.725 87.792 141.561 96.6015 131.232C105.487 120.828 109.93 106.209 109.93 87.3743C109.93 68.6919 105.525 54.2244 96.7155 43.9719C87.9059 33.6435 74.5396 28.4792 56.6167 28.4792H30.0741V146.725Z" fill="var(--fill-0, #12191F)"/>
+          <!-- O -->
+          <path class="wm-letter" d="M235.808 175.204C220.619 175.204 207.063 171.597 195.14 164.382C183.292 157.091 173.913 146.915 167.002 133.852C160.167 120.714 156.75 105.335 156.75 87.716C156.75 70.0209 160.167 54.6042 167.002 41.4658C173.913 28.3273 183.292 18.1508 195.14 10.936C207.063 3.64534 220.619 0 235.808 0C250.921 0 264.439 3.64534 276.362 10.936C288.286 18.1508 297.665 28.3273 304.5 41.4658C311.411 54.6042 314.866 70.0209 314.866 87.716C314.866 105.335 311.411 120.714 304.5 133.852C297.665 146.991 288.286 157.167 276.362 164.382C264.439 171.597 250.921 175.204 235.808 175.204ZM235.808 148.206C245.073 148.206 253.351 145.852 260.642 141.143C268.009 136.434 273.818 129.599 278.071 120.638C282.324 111.601 284.451 100.627 284.451 87.716C284.451 74.7295 282.324 63.7175 278.071 54.6801C273.818 45.6427 268.009 38.7697 260.642 34.0612C253.351 29.3526 245.073 26.9983 235.808 26.9983C226.543 26.9983 218.227 29.3526 210.86 34.0612C203.57 38.7697 197.76 45.6427 193.431 54.6801C189.178 63.7175 187.052 74.7295 187.052 87.716C187.052 100.627 189.178 111.601 193.431 120.638C197.76 129.599 203.57 136.434 210.86 141.143C218.227 145.852 226.543 148.206 235.808 148.206Z" fill="var(--fill-0, #12191F)"/>
+          <!-- N -->
+          <path class="wm-letter" d="M337.194 172.47V2.73401H369.66L429.239 97.399C431.289 100.589 433.985 105.107 437.327 110.955C440.669 116.803 444.048 122.764 447.466 128.84C447.238 122.461 447.048 116.119 446.896 109.816C446.82 103.437 446.782 98.5761 446.782 95.2345V2.73401H476.97V172.47H444.39L390.621 87.2603C388.191 83.4631 384.849 77.9951 380.596 70.8563C376.343 63.6416 371.635 55.4396 366.471 46.2503C366.85 55.6674 367.078 63.9074 367.154 70.9702C367.23 78.0331 367.268 83.4251 367.268 87.1464V172.47H337.194Z" fill="var(--fill-0, #12191F)"/>
+          <!-- D -->
+          <path class="wm-letter" d="M562.636 172.47H505.335V2.73401H563.889C580.748 2.73401 595.292 6.18949 607.519 13.1004C619.746 19.9355 629.163 29.6943 635.77 42.3771C642.377 54.9839 645.681 69.983 645.681 87.3743C645.681 104.917 642.377 120.068 635.77 132.827C629.163 145.51 619.632 155.307 607.177 162.218C594.798 169.053 579.951 172.47 562.636 172.47ZM535.409 146.725H561.041C579.495 146.725 593.127 141.561 601.937 131.232C610.822 120.828 615.265 106.209 615.265 87.3743C615.265 68.6919 610.86 54.2244 602.051 43.9719C593.241 33.6435 579.875 28.4792 561.952 28.4792H535.409V146.725Z" fill="var(--fill-0, #12191F)"/>
+          <!-- O -->
+          <path class="wm-letter" d="M741.143 175.204C725.954 175.204 712.398 171.597 700.475 164.382C688.628 157.091 679.249 146.915 672.338 133.852C665.503 120.714 662.085 105.335 662.085 87.716C662.085 70.0209 665.503 54.6042 672.338 41.4658C679.249 28.3273 688.628 18.1508 700.475 10.936C712.398 3.64534 725.954 0 741.143 0C756.256 0 769.774 3.64534 781.698 10.936C793.621 18.1508 803 28.3273 809.835 41.4658C816.746 54.6042 820.202 70.0209 820.202 87.716C820.202 105.335 816.746 120.714 809.835 133.852C803 146.991 793.621 157.167 781.698 164.382C769.774 171.597 756.256 175.204 741.143 175.204ZM741.143 148.206C750.409 148.206 758.687 145.852 765.977 141.143C773.344 136.434 779.154 129.599 783.407 120.638C787.659 111.601 789.786 100.627 789.786 87.716C789.786 74.7295 787.659 63.7175 783.407 54.6801C779.154 45.6427 773.344 38.7697 765.977 34.0612C758.687 29.3526 750.409 26.9983 741.143 26.9983C731.878 26.9983 723.562 29.3526 716.196 34.0612C708.905 38.7697 703.095 45.6427 698.766 54.6801C694.513 63.7175 692.387 74.7295 692.387 87.716C692.387 100.627 694.513 111.601 698.766 120.638C703.095 129.599 708.905 136.434 716.196 141.143C723.562 145.852 731.878 148.206 741.143 148.206Z" fill="var(--fill-0, #12191F)"/>
+          <!-- T -->
+          <path class="wm-letter" d="M824.303 28.821V2.73401H959.978V28.821H907.348V172.47H877.16V28.821H824.303Z" fill="var(--fill-0, #12191F)"/>
+          <!-- H -->
+          <path class="wm-letter" d="M979.458 172.47V2.73401H1009.53V72.7929H1087.79V2.73401H1117.98V172.47H1087.79V98.8799H1009.53V172.47H979.458Z" fill="var(--fill-0, #12191F)"/>
+          <!-- A -->
+          <path class="wm-letter" d="M1133.59 172.47L1194.19 2.73401H1232.01L1292.39 172.47H1259.24L1245.68 131.916H1179.84L1165.94 172.47H1133.59ZM1188.27 107.196H1237.48L1229.51 83.2733C1227 75.451 1224.42 67.2869 1221.76 58.7811C1219.18 50.2753 1216.29 40.6683 1213.1 29.9601C1209.91 40.6683 1206.99 50.2753 1204.33 58.7811C1201.67 67.2869 1199.05 75.451 1196.47 83.2733L1188.27 107.196Z" fill="var(--fill-0, #12191F)"/>
+          <!-- T -->
+          <path class="wm-letter" d="M1276.32 28.821V2.73401H1412V28.821H1359.37V172.47H1329.18V28.821H1276.32Z" fill="var(--fill-0, #12191F)"/>
+        </svg>
+      </div>
+
+      <!-- Flexible gap: grows freely, 48px minimum -->
+      <div class="gap" aria-hidden="true"></div>
+
+      <!-- Skull — 3D interactive hero -->
+      <div class="skull-stage" id="skull-stage">
+        <canvas id="skull-canvas"></canvas>
+      </div>
+
+      <!-- Flexible gap -->
+      <div class="gap" aria-hidden="true"></div>
+
+      <!-- Content — centered bottom -->
+      <div class="content" id="content">
+        <div class="copy">
+          <p class="bio" id="bio">
+            I'm Don Ario, a Designer from South Tangerang with 6+ years in UX/UI, Branding, and Visual Content. Most days involve pixels and decks, while some days I brief an AI like an unpaid intern.
+          </p>
+        </div>
+
+        <div class="links" id="links">
+          <a href="https://www.instagram.com/dondothat.lol/" class="social-link" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="https://www.linkedin.com/in/donariorafly/" class="social-link" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://www.cosmos.so/dondothat/works-by-ddt%e2%84%a2" class="social-link" target="_blank" rel="noopener noreferrer">Cosmos</a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+
+    /* ═══════════════════════════════════════════
+       CONFIG
+    ═══════════════════════════════════════════ */
+    const ROLL_DUR  = '0.32s';
+    const ROLL_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+    const STEP_MS   = 28; // ms stagger between chars on hover
+
+    /* ═══════════════════════════════════════════
+       CHAR ROLL — helpers
+    ═══════════════════════════════════════════ */
+    function buildSlots(el) {
+      const text = el.textContent.trim();
+      el.innerHTML = '';
+      return text.split('').map(ch => {
+        const slot = document.createElement('span');
+        slot.className = 'char-slot';
+        const a = document.createElement('span');
+        a.className = 'char-a';
+        a.textContent = ch === ' ' ? '\u00A0' : ch;
+        const b = document.createElement('span');
+        b.className = 'char-b';
+        b.textContent = ch === ' ' ? '\u00A0' : ch;
+        slot.appendChild(a);
+        slot.appendChild(b);
+        el.appendChild(slot);
+        b.style.transform = 'translateY(0)';
+        return { slot, a, b };
+      });
+    }
+
+    function bindHover(el, slots) {
+      const n = slots.length;
+      el.addEventListener('mouseenter', () => {
+        slots.forEach(({ a, b }, i) => {
+          const delay = `${i * STEP_MS}ms`;
+          a.style.transition = `transform ${ROLL_DUR} ${ROLL_EASE} ${delay}`;
+          b.style.transition = `transform ${ROLL_DUR} ${ROLL_EASE} ${delay}`;
+          a.style.transform  = 'translateY(-100%)';
+          b.style.transform  = 'translateY(-100%)';
+        });
+      });
+      el.addEventListener('mouseleave', () => {
+        slots.forEach(({ a, b }, i) => {
+          const delay = `${(n - 1 - i) * STEP_MS}ms`;
+          a.style.transition = `transform ${ROLL_DUR} ${ROLL_EASE} ${delay}`;
+          b.style.transition = `transform ${ROLL_DUR} ${ROLL_EASE} ${delay}`;
+          a.style.transform  = 'translateY(0)';
+          b.style.transform  = 'translateY(0)';
+        });
+      });
+    }
+
+    /* ═══════════════════════════════════════════
+       INIT — bind char hover on links
+    ═══════════════════════════════════════════ */
+    const navLinkData    = Array.from(document.querySelectorAll('.nav-link'))
+                               .map(el => ({ el, slots: buildSlots(el) }));
+    const socialLinkData = Array.from(document.querySelectorAll('.social-link'))
+                               .map(el => ({ el, slots: buildSlots(el) }));
+
+    // Only bind hover on devices that actually have a hover-capable pointer (not touch)
+    if (window.matchMedia('(hover: hover)').matches) {
+      [...navLinkData, ...socialLinkData].forEach(({ el, slots }) => bindHover(el, slots));
+    }
+
+    /* ═══════════════════════════════════════════
+       ENTRANCE SEQUENCE
+    ═══════════════════════════════════════════ */
+    function runEntrance() {
+      const $ = id => document.getElementById(id);
+
+      // Nav border + logo + menu
+      $('nav').classList.add('visible');
+      setTimeout(() => $('nav-logo').classList.add('visible'),  60);
+      setTimeout(() => document.querySelector('.nav-menu').classList.add('visible'), 100);
+
+      // DONDOTHAT — letters stagger in (45ms apart)
+      const letters = document.querySelectorAll('.wm-letter');
+      letters.forEach((el, i) =>
+        setTimeout(() => el.classList.add('visible'), 120 + i * 45)
+      );
+      // Last letter (T) starts at 120 + 8*45 = 480ms
+
+      // Skull — enters as last letter starts
+      setTimeout(() => $('skull-stage').classList.add('visible'), 480);
+
+      // Headline lines
+      setTimeout(() => $('l1').classList.add('visible'), 620);
+      setTimeout(() => $('l2').classList.add('visible'), 750);
+
+      // Bio + links
+      setTimeout(() => $('bio').classList.add('visible'),   900);
+      setTimeout(() => $('links').classList.add('visible'), 940);
+    }
+
+    /* ═══════════════════════════════════════════
+       PAGE LOADER
+    ═══════════════════════════════════════════ */
+    (function() {
+      const loaderEl = document.getElementById('page-loader');
+      const textEl   = document.getElementById('loader-text');
+
+      function getSession(k)   { try { return sessionStorage.getItem(k); }   catch(e) { return null; } }
+      function setSession(k,v) { try { sessionStorage.setItem(k, v); }        catch(e) {} }
+
+      // Skip on return visits
+      if (getSession('site-loaded')) {
+        loaderEl.style.display = 'none';
+        runEntrance();
+        return;
+      }
+
+      // Dot ticker: cycles "." → ".." → "..." every 500ms
+      const dots = ['.', '..', '...'];
+      let dotIdx = 0;
+      textEl.textContent = 'Just a moment.'; // show first dot immediately
+      const dotTimer = setInterval(() => {
+        dotIdx = (dotIdx + 1) % dots.length;
+        textEl.textContent = 'Just a moment' + dots[dotIdx];
+      }, 500);
+
+      // Hook for Three.js module
+      let ready   = false;
+      let exiting = false;
+
+      window.__skullProgress = function() {};
+      window.__skullLoaded   = function() { ready = true; };
+
+      function tryExit() {
+        if (!ready || exiting) return;
+        exiting = true;
+        clearInterval(dotTimer);
+        setSession('site-loaded', '1');
+        loaderEl.classList.add('exit');
+        loaderEl.addEventListener('transitionend', () => {
+          loaderEl.style.display = 'none';
+        }, { once: true });
+        setTimeout(runEntrance, 100);
+      }
+
+      // Poll until ready
+      (function poll() {
+        if (ready) { tryExit(); return; }
+        requestAnimationFrame(poll);
+      })();
+
+      // 15s fallback
+      setTimeout(() => { ready = true; tryExit(); }, 15000);
+    })();
+
+    // Page transition — fade out current content, new page plays entrance animation
+    (function() {
+      window.addEventListener('pageshow', () => { document.body.style.opacity = '1'; });
+      document.querySelectorAll('a[href]').forEach(a => {
+        const href = a.getAttribute('href');
+        if (!/^(index|work|curriculum)\.html?$/.test(href || '')) return;
+        if (href === (location.pathname.split('/').pop() || 'index.html')) return;
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          document.body.style.transition = 'opacity 0.3s ease';
+          document.body.style.opacity    = '0';
+          setTimeout(() => { location.href = href; }, 320);
+        });
+      });
+    })();
+
+    // Block all touch scroll on this fixed-layout page — the only reliable iOS Safari fix
+    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
+    import { MeshoptDecoder }  from 'three/addons/libs/meshopt_decoder.module.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
+
+    const stage  = document.getElementById('skull-stage');
+    const canvas = document.getElementById('skull-canvas');
+    if (!stage || !canvas) throw new Error('skull elements missing');
+
+    // ── Renderer ─────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // ── Scene ─────────────────────────────────────────────────────────
+    const scene  = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+    camera.position.set(0, 0, 4);
+
+    // ── Environment + Lighting ────────────────────────────────────────
+    // Neutral studio environment — provides PBR ambient for GLB materials
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.2;
+    pmrem.dispose();
+    // Single key directional keeps strong shadows for dithering contrast
+    const key = new THREE.DirectionalLight(0xffffff, 1.8);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+
+    // ── Dithering shader ──────────────────────────────────────────────
+    // Verified Bayer 8×8 ordered-dithering (mathematically exact, no if-else).
+    // Construction: result = XOR-interleaved x/y bits + y bit pass-through
+    //   bit5 = x0 XOR y0,  bit4 = y0
+    //   bit3 = x1 XOR y1,  bit2 = y1
+    //   bit1 = x2 XOR y2,  bit0 = y2
+    // Gives the canonical 8×8 Bayer threshold matrix (0-63 range / 64).
+    const DitherShader = {
+      uniforms: {
+        tDiffuse:    { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uGridSize:   { value: 4.0 },   // dither cell size in screen pixels
+        uPixelSize:  { value: 4.0 },   // pixelation block size in screen pixels
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2  uResolution;
+        uniform float uGridSize;
+        uniform float uPixelSize;
+        varying vec2 vUv;
+
+        // Returns Bayer 8×8 threshold in [0,1) for integer cell position p.
+        // Verified against the standard 8×8 matrix (values 0-63).
+        float bayer8(vec2 p) {
+          vec2 q = mod(p, 8.0);
+          // Extract individual bits via fract (no bitwise ops needed — GLSL ES 1.0 safe)
+          float xb0 = fract(q.x * 0.5)   >= 0.5 ? 1.0 : 0.0;
+          float xb1 = fract(q.x * 0.25)  >= 0.5 ? 1.0 : 0.0;
+          float xb2 = fract(q.x * 0.125) >= 0.5 ? 1.0 : 0.0;
+          float yb0 = fract(q.y * 0.5)   >= 0.5 ? 1.0 : 0.0;
+          float yb1 = fract(q.y * 0.25)  >= 0.5 ? 1.0 : 0.0;
+          float yb2 = fract(q.y * 0.125) >= 0.5 ? 1.0 : 0.0;
+          // Interleave: XOR pairs set the high bit of each pair, y bit sets the low bit
+          return (abs(xb0 - yb0) * 32.0 +
+                  yb0             * 16.0 +
+                  abs(xb1 - yb1) *  8.0 +
+                  yb1             *  4.0 +
+                  abs(xb2 - yb2) *  2.0 +
+                  yb2) / 64.0;
+        }
+
+        void main() {
+          // Pixelate: snap to nearest block centre, then sample
+          vec2 pixCoord = floor(gl_FragCoord.xy / uPixelSize) * uPixelSize + uPixelSize * 0.5;
+          vec4 col  = texture2D(tDiffuse, pixCoord / uResolution);
+
+          // Perceptual luminance (BT.709)
+          float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+          // Ordered-dither threshold for this cell
+          float thr = bayer8(floor(gl_FragCoord.xy / uGridSize));
+          float d   = step(thr, luma);
+
+          // Two-tone: brand dark (#12191f) ↔ white
+          vec3 dark = vec3(18.0/255.0, 25.0/255.0, 31.0/255.0);
+          gl_FragColor = vec4(mix(dark, vec3(1.0), d), 1.0);
+        }
+      `,
+    };
+
+    // ── Post-processing ───────────────────────────────────────────────
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const ditherPass = new ShaderPass(DitherShader);
+    ditherPass.renderToScreen = true;
+    composer.addPass(ditherPass);
+
+    // ── Resize ────────────────────────────────────────────────────────
+    function resize() {
+      const w = stage.clientWidth;
+      const h = stage.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+      const pr = renderer.getPixelRatio();
+      ditherPass.uniforms.uResolution.value.set(w * pr, h * pr);
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(stage);
+
+    // ── Skull group ────────────────────────────────────────────────────
+    const skullGroup = new THREE.Group();
+    scene.add(skullGroup);
+
+    // ── Load GLB ──────────────────────────────────────────────────────
+    // skull-404.glb uses EXT_meshopt_compression — register the decoder
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load(
+      '/skull-404.glb',
+      (gltf) => {
+        const model = gltf.scene;
+        // Normalize size + center in world space
+        const box    = new THREE.Box3().setFromObject(model);
+        const size   = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const scale  = 2.4 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        // Offset to center: world center = model.position + scale*center, set = 0
+        model.position.set(
+          -center.x * scale,
+          -center.y * scale,
+          -center.z * scale
+        );
+        skullGroup.add(model);
+        if (window.__skullLoaded) window.__skullLoaded();
+      },
+      (xhr) => {
+        if (window.__skullProgress) window.__skullProgress(xhr.loaded, xhr.total || 4800000);
+      },
+      (err) => {
+        // GLB failed (e.g. served as file:// — needs HTTP server).
+        // Add a placeholder sphere so the canvas is visibly alive for debugging.
+        console.warn('skull.glb failed to load:', err,
+          '\nOpen via HTTP server: python3 server.py → http://localhost:3000');
+        const fallback = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(0.9, 3),
+          new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.6, metalness: 0.2 })
+        );
+        skullGroup.add(fallback);
+        if (window.__skullLoaded) window.__skullLoaded();
+      }
+    );
+
+    // ── Interaction (drag-only, velocity-based smooth auto-resume) ───────
+    const AUTO_VEL = 0.004;   // auto-rotation speed (rad/frame)
+
+    let rotX = 0, rotY = 0;   // current smoothed angles
+    let tgtX = 0, tgtY = 0;   // target angles
+    let velY = AUTO_VEL;      // current Y velocity — starts at auto speed
+    let dragging   = false;
+    let dragPrev   = { x: 0, y: 0 };
+    let dragVelY   = 0;        // velocity measured during last move event
+    let lastMoveT  = 0;        // timestamp of last pointermove
+
+    stage.addEventListener('pointerdown', (e) => {
+      dragging  = true;
+      dragVelY  = 0;
+      dragPrev  = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+      stage.setPointerCapture(e.pointerId);
+    });
+
+    stage.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      dragVelY  = (e.clientX - dragPrev.x) * 0.012;
+      tgtY     += dragVelY;
+      tgtX     += (e.clientY - dragPrev.y) * 0.012;
+      dragPrev  = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+    });
+
+    stage.addEventListener('pointerup', () => {
+      dragging = false;
+      // Carry drag momentum only if pointer was still moving at release
+      velY = (performance.now() - lastMoveT < 120) ? dragVelY : 0;
+    });
+
+    // ── Animation loop ─────────────────────────────────────────────────
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!dragging) {
+        // Continuously blend current velocity toward auto speed — never choppy
+        velY  += (AUTO_VEL - velY) * 0.025;
+        tgtY  += velY;
+        tgtX  *= 0.94;   // gently level out any X tilt from dragging
+      }
+
+      rotX += (tgtX - rotX) * 0.08;
+      rotY += (tgtY - rotY) * 0.08;
+
+      skullGroup.rotation.x = rotX;
+      skullGroup.rotation.y = rotY;
+
+      composer.render();
+    }
+    animate();
+  </script>
+
+</body>
+</html>

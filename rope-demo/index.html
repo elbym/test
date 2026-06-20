@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaktives Seil – 40×</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #080816; overflow: hidden; }
+    canvas { display: block; cursor: crosshair; }
+    #info {
+      position: fixed;
+      bottom: 22px;
+      width: 100%;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.28);
+      font: 13px/1 system-ui, sans-serif;
+      pointer-events: none;
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">Maus bewegen zum Anziehen &nbsp;·&nbsp; Klicken &amp; Ziehen zum Greifen</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+let W = 0, H = 0;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', () => { resize(); init(); });
+
+// ── Config ─────────────────────────────────────────────────────────────────
+const TEXT    = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.";
+const N         = 6;     // nodes per rope
+const GRAVITY   = 0.48;
+const DAMPING   = 0.968;
+const ITERS     = 20;
+const M_RADIUS  = 130;
+const M_FORCE   = 8.0;
+const DRAG_R    = 44;
+const M_RADIUS_SQ = M_RADIUS * M_RADIUS;
+const DRAG_R_SQ   = DRAG_R * DRAG_R;
+
+// computed on init/resize from screen height and line count
+let SEG_LEN = 34;
+let ROW_H   = 100;
+
+// ── Text → ropes ───────────────────────────────────────────────────────────
+const CHARS_PER_LINE = 10;
+const LINES = TEXT.split('\n').flatMap(seg => {
+  const chunks = [];
+  for (let i = 0; i < seg.length; i += CHARS_PER_LINE) chunks.push(seg.slice(i, i + CHARS_PER_LINE));
+  return chunks.length ? chunks : [''];
+});
+const CHARS     = LINES.flatMap(l => l.split(''));
+const NUM_ROPES = CHARS.length;
+
+// For each rope: which line it belongs to and its position within that line
+const ROPE_LINE = [];
+const ROPE_POS  = [];
+LINES.forEach((line, l) => {
+  for (let c = 0; c < line.length; c++) { ROPE_LINE.push(l); ROPE_POS.push(c); }
+});
+
+// ── State ──────────────────────────────────────────────────────────────────
+let ropes    = [];
+let mouse    = { x: -9999, y: -9999 };
+let dragRope = -1;
+let dragIdx  = -1;
+
+function computeLayout() {
+  ROW_H   = Math.floor(H / LINES.length);
+  SEG_LEN = Math.max(8, Math.floor(ROW_H * 0.75 / N));
+}
+
+// Each line gets a horizontal band; anchor bar sits at the top of its band
+function anchorY(l) { return Math.floor(l * ROW_H + ROW_H * 0.12); }
+// All lines spread across full screen width
+function anchorX(r) {
+  const c = ROPE_POS[r];
+  const n = LINES[ROPE_LINE[r]].length;
+  return (c + 1) * W / (n + 1);
+}
+
+function init() {
+  computeLayout();
+  ropes = [];
+  for (let r = 0; r < NUM_ROPES; r++) {
+    const ax = anchorX(r), ay = anchorY(ROPE_LINE[r]);
+    const nodes = [];
+    for (let i = 0; i < N; i++) {
+      nodes.push({ x: ax, y: ay + i * SEG_LEN, px: ax, py: ay + i * SEG_LEN });
+    }
+    ropes.push(nodes);
+  }
+}
+init();
+
+// ── Input ──────────────────────────────────────────────────────────────────
+function evPos(e) {
+  const s = e.touches ? e.touches[0] : e;
+  return { x: s.clientX, y: s.clientY };
+}
+
+function findNearest(px, py) {
+  let bestSq = DRAG_R_SQ, ri = -1, ni = -1;
+  for (let r = 0; r < NUM_ROPES; r++) {
+    for (let i = 1; i < N; i++) {
+      const dx = ropes[r][i].x - px, dy = ropes[r][i].y - py;
+      const dSq = dx * dx + dy * dy;
+      if (dSq < bestSq) { bestSq = dSq; ri = r; ni = i; }
+    }
+  }
+  return { ri, ni };
+}
+
+canvas.addEventListener('mousemove', e => {
+  const p = evPos(e);
+  mouse.x = p.x; mouse.y = p.y;
+  const { ri } = findNearest(p.x, p.y);
+  canvas.style.cursor = ri >= 0 ? 'grab' : 'crosshair';
+});
+canvas.addEventListener('mousedown', e => {
+  const p = evPos(e);
+  mouse.x = p.x; mouse.y = p.y;
+  const { ri, ni } = findNearest(p.x, p.y);
+  dragRope = ri; dragIdx = ni;
+  if (ri >= 0) canvas.style.cursor = 'grabbing';
+});
+canvas.addEventListener('mouseup',    () => { dragRope = -1; dragIdx = -1; canvas.style.cursor = 'crosshair'; });
+canvas.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; dragRope = -1; dragIdx = -1; });
+
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); const p = evPos(e); mouse.x = p.x; mouse.y = p.y; }, { passive: false });
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const p = evPos(e); mouse.x = p.x; mouse.y = p.y;
+  const { ri, ni } = findNearest(p.x, p.y); dragRope = ri; dragIdx = ni;
+}, { passive: false });
+canvas.addEventListener('touchend', () => { dragRope = -1; dragIdx = -1; });
+
+// ── Physics ────────────────────────────────────────────────────────────────
+// Pre-allocated scratch buffers — avoid per-frame allocations
+const _preX = new Float32Array(N);
+const _preY = new Float32Array(N);
+
+function simulate() {
+  for (let r = 0; r < NUM_ROPES; r++) {
+    const nodes = ropes[r];
+    const ax = anchorX(r), ay = anchorY(ROPE_LINE[r]);
+    const isDragRope = r === dragRope;
+
+    // 1. Verlet + gravity
+    for (let i = 1; i < N; i++) {
+      if (isDragRope && i === dragIdx) {
+        nodes[i].px = nodes[i].x; nodes[i].py = nodes[i].y;
+        nodes[i].x  = mouse.x;   nodes[i].y  = mouse.y;
+        continue;
+      }
+      const vx = (nodes[i].x - nodes[i].px) * DAMPING;
+      const vy = (nodes[i].y - nodes[i].py) * DAMPING;
+      nodes[i].px = nodes[i].x; nodes[i].py = nodes[i].y;
+      nodes[i].x += vx;
+      nodes[i].y += vy + GRAVITY;
+    }
+
+    // 2. Mouse attraction force
+    for (let i = 1; i < N; i++) {
+      if (isDragRope && i === dragIdx) continue;
+      const dx = mouse.x - nodes[i].x;
+      const dy = mouse.y - nodes[i].y;
+      const dSq = dx * dx + dy * dy;
+      if (dSq < M_RADIUS_SQ && dSq > 0.25) {
+        const d = Math.sqrt(dSq);
+        const f = Math.pow(1 - d / M_RADIUS, 1.5) * M_FORCE;
+        nodes[i].x -= (dx / d) * f;
+        nodes[i].y -= (dy / d) * f;
+      }
+    }
+
+    // Snapshot positions before constraints so corrections add zero net velocity
+    for (let i = 0; i < N; i++) { _preX[i] = nodes[i].x; _preY[i] = nodes[i].y; }
+
+    // 3. Constraint resolution (one-sided: only correct when stretched, not compressed)
+    for (let iter = 0; iter < ITERS; iter++) {
+      nodes[0].x = ax; nodes[0].y = ay;
+      for (let i = 0; i < N - 1; i++) {
+        const a = nodes[i], b = nodes[i + 1];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d  = Math.hypot(dx, dy) || 0.001;
+        if (d <= SEG_LEN) continue;
+        const corr = (d - SEG_LEN) / d;
+        const pinA = i === 0;
+        const pinB = isDragRope && (i + 1) === dragIdx;
+        if (pinA && !pinB) {
+          b.x -= dx * corr; b.y -= dy * corr;
+        } else if (!pinA && pinB) {
+          a.x += dx * corr; a.y += dy * corr;
+        } else if (!pinA && !pinB) {
+          a.x += dx * corr * 0.5; a.y += dy * corr * 0.5;
+          b.x -= dx * corr * 0.5; b.y -= dy * corr * 0.5;
+        }
+      }
+    }
+
+    // 4. Cancel constraint-induced velocity — prevents spring-back
+    for (let i = 1; i < N; i++) {
+      if (isDragRope && i === dragIdx) continue;
+      nodes[i].px += nodes[i].x - _preX[i];
+      nodes[i].py += nodes[i].y - _preY[i];
+    }
+  }
+}
+
+// ── Colors & pre-rendered letter sprites ─────────────────────────────────
+// One color per text line
+const LINE_COLORS = LINES.map((_, l) => {
+  const h = 190 + (l / Math.max(LINES.length - 1, 1)) * 165;
+  return `hsl(${h}, 88%, 68%)`;
+});
+
+const SPRITE_SIZE = 48;
+const SPRITE_HALF = SPRITE_SIZE / 2;
+// One sprite per rope (= one character in the text)
+const sprites = CHARS.map((char, r) => {
+  const color = LINE_COLORS[ROPE_LINE[r]];
+  const oc    = document.createElement('canvas');
+  oc.width    = oc.height = SPRITE_SIZE;
+  const octx  = oc.getContext('2d');
+  octx.font         = 'bold 16px "Courier New", Courier, monospace';
+  octx.textAlign    = 'center';
+  octx.textBaseline = 'middle';
+  octx.fillStyle    = color;
+  octx.shadowColor  = color;
+  octx.shadowBlur   = 12;
+  octx.fillText(char, SPRITE_HALF, SPRITE_HALF);
+  return oc;
+});
+
+// ── Draw ──────────────────────────────────────────────────────────────────
+function drawBackground() {
+  ctx.fillStyle = '#080816';
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawMouseHint() {
+  if (mouse.x < -999) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(160, 160, 255, 0.07)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, M_RADIUS, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAnchorBar() {
+  ctx.save();
+  ctx.fillStyle   = '#1c1c2e';
+  ctx.strokeStyle = '#3a3a55';
+  ctx.lineWidth   = 1;
+  for (let l = 0; l < LINES.length; l++) {
+    const ay = anchorY(l);
+    ctx.fillRect(0, ay - 6, W, 6);
+    ctx.strokeRect(0, ay - 6, W, 6);
+  }
+  ctx.restore();
+}
+
+function drawRopes() {
+  ctx.save();
+  ctx.lineWidth   = 1.5;
+  ctx.lineCap     = 'round';
+  ctx.strokeStyle = 'rgba(120, 110, 150, 0.3)';
+  for (let r = 0; r < NUM_ROPES; r++) {
+    const nodes = ropes[r];
+    ctx.beginPath();
+    ctx.moveTo(nodes[0].x, nodes[0].y);
+    for (let i = 1; i < N - 1; i++) {
+      const mx = (nodes[i].x + nodes[i + 1].x) * 0.5;
+      const my = (nodes[i].y + nodes[i + 1].y) * 0.5;
+      ctx.quadraticCurveTo(nodes[i].x, nodes[i].y, mx, my);
+    }
+    ctx.lineTo(nodes[N - 1].x, nodes[N - 1].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLetters() {
+  for (let r = 0; r < NUM_ROPES; r++) {
+    const sp = sprites[r];
+    for (let i = 0; i < N; i++) {
+      ctx.drawImage(sp, ropes[r][i].x - SPRITE_HALF, ropes[r][i].y - SPRITE_HALF);
+    }
+  }
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────
+function loop() {
+  drawBackground();
+  simulate();
+  drawMouseHint();
+  drawAnchorBar();
+  drawLetters();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

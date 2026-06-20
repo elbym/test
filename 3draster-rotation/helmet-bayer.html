@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dither Demo — Bayer 8×8</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-family: monospace;
+    }
+
+    .stage {
+      aspect-ratio: 4/3;
+      height: clamp(200px, 60vh, 560px);
+      width: auto;
+      cursor: grab;
+    }
+    .stage:active { cursor: grabbing; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    #status { font-size: 12px; color: #888; }
+
+    .controls {
+      display: flex;
+      gap: 24px;
+      font-size: 11px;
+      color: #333;
+      align-items: center;
+    }
+    label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    input[type=range] { width: 80px; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <div class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="status">Loading…</div>
+
+  <div class="controls">
+    <label>
+      Pixel size
+      <input type="range" id="pixelSize" min="1" max="8" value="4" step="1">
+      <span id="pixelVal">4</span>px
+    </label>
+    <label>
+      Grid size
+      <input type="range" id="gridSize" min="1" max="8" value="4" step="1">
+      <span id="gridVal">4</span>px
+    </label>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
+
+    const stage  = document.getElementById('stage');
+    const canvas = document.getElementById('canvas');
+    const status = document.getElementById('status');
+
+    // ── Renderer ──────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // ── Scene ─────────────────────────────────────────────────────────
+    const scene  = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+    camera.position.set(0, 0, 4);
+
+    // ── Environment + Lighting ────────────────────────────────────────
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.4;
+    pmrem.dispose();
+
+    const key = new THREE.DirectionalLight(0xffffff, 2.0);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+    fill.position.set(-3, -1, 2);
+    scene.add(fill);
+
+    // ── Bayer 8×8 Dither Shader ───────────────────────────────────────
+    // Threshold computed analytically via bit-interleaving (no texture needed).
+    // Construction: for each (x,y) in the 8×8 cell, extract 3 bits each and
+    // interleave as XOR pairs → gives canonical 8×8 Bayer matrix (values 0–63).
+    const BayerShader = {
+      uniforms: {
+        tDiffuse:    { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uGridSize:   { value: 4.0 },
+        uPixelSize:  { value: 4.0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2  uResolution;
+        uniform float uGridSize;
+        uniform float uPixelSize;
+        varying vec2 vUv;
+
+        // Bayer 8×8 threshold in [0,1) — GLSL ES 1.0 safe (no bitwise ops)
+        float bayer8(vec2 p) {
+          vec2 q = mod(p, 8.0);
+          float xb0 = fract(q.x * 0.5)   >= 0.5 ? 1.0 : 0.0;
+          float xb1 = fract(q.x * 0.25)  >= 0.5 ? 1.0 : 0.0;
+          float xb2 = fract(q.x * 0.125) >= 0.5 ? 1.0 : 0.0;
+          float yb0 = fract(q.y * 0.5)   >= 0.5 ? 1.0 : 0.0;
+          float yb1 = fract(q.y * 0.25)  >= 0.5 ? 1.0 : 0.0;
+          float yb2 = fract(q.y * 0.125) >= 0.5 ? 1.0 : 0.0;
+          return (abs(xb0 - yb0) * 32.0 +
+                  yb0             * 16.0 +
+                  abs(xb1 - yb1) *  8.0 +
+                  yb1             *  4.0 +
+                  abs(xb2 - yb2) *  2.0 +
+                  yb2) / 64.0;
+        }
+
+        void main() {
+          // Pixelate: snap to nearest block centre
+          vec2 pixCoord = floor(gl_FragCoord.xy / uPixelSize) * uPixelSize + uPixelSize * 0.5;
+          vec4 col  = texture2D(tDiffuse, pixCoord / uResolution);
+
+          // Perceptual luminance (BT.709)
+          float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+          // Bayer threshold for this dither cell
+          float thr = bayer8(floor(gl_FragCoord.xy / uGridSize));
+          float d   = step(thr, luma);
+
+          vec3 dark = vec3(18.0/255.0, 25.0/255.0, 31.0/255.0);
+          gl_FragColor = vec4(mix(dark, vec3(1.0), d), 1.0);
+        }
+      `,
+    };
+
+    // ── Post-processing ───────────────────────────────────────────────
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const ditherPass = new ShaderPass(BayerShader);
+    ditherPass.renderToScreen = true;
+    composer.addPass(ditherPass);
+
+    // ── Resize ────────────────────────────────────────────────────────
+    function resize() {
+      const w = stage.clientWidth;
+      const h = stage.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+      const pr = renderer.getPixelRatio();
+      ditherPass.uniforms.uResolution.value.set(w * pr, h * pr);
+    }
+    resize();
+    new ResizeObserver(resize).observe(stage);
+
+    // ── Controls ──────────────────────────────────────────────────────
+    document.getElementById('pixelSize').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value);
+      document.getElementById('pixelVal').textContent = v;
+      ditherPass.uniforms.uPixelSize.value = v;
+    });
+    document.getElementById('gridSize').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value);
+      document.getElementById('gridVal').textContent = v;
+      ditherPass.uniforms.uGridSize.value = v;
+    });
+
+    // ── Model ─────────────────────────────────────────────────────────
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const GLB_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb';
+
+    new GLTFLoader().load(
+      GLB_URL,
+      (gltf) => {
+        const model  = gltf.scene;
+        const box    = new THREE.Box3().setFromObject(model);
+        const size   = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const scale  = 2.2 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        group.add(model);
+        status.style.display = 'none';
+      },
+      (xhr) => {
+        if (xhr.total) status.textContent = `Loading… ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+      },
+      (err) => {
+        console.error(err);
+        status.textContent = 'Load failed — needs HTTP server';
+      }
+    );
+
+    // ── Interaction ───────────────────────────────────────────────────
+    const AUTO_VEL = 0.004;
+    let rotX = 0, rotY = 0, tgtX = 0, tgtY = 0;
+    let velY = AUTO_VEL;
+    let dragging = false, dragPrev = { x: 0, y: 0 }, dragVelY = 0, lastMoveT = 0;
+
+    stage.addEventListener('pointerdown', (e) => {
+      dragging = true; dragVelY = 0;
+      dragPrev = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+      stage.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      dragVelY  = (e.clientX - dragPrev.x) * 0.012;
+      tgtY     += dragVelY;
+      tgtX     += (e.clientY - dragPrev.y) * 0.012;
+      dragPrev  = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+    });
+    stage.addEventListener('pointerup', () => {
+      dragging = false;
+      velY = (performance.now() - lastMoveT < 120) ? dragVelY : 0;
+    });
+
+    // ── Render loop ───────────────────────────────────────────────────
+    (function animate() {
+      requestAnimationFrame(animate);
+      if (!dragging) {
+        velY += (AUTO_VEL - velY) * 0.025;
+        tgtY += velY;
+        tgtX *= 0.94;
+      }
+      rotX += (tgtX - rotX) * 0.08;
+      rotY += (tgtY - rotY) * 0.08;
+      group.rotation.x = rotX;
+      group.rotation.y = rotY;
+      composer.render();
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dither Demo — White Noise</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-family: monospace;
+    }
+
+    .stage {
+      aspect-ratio: 4/3;
+      height: clamp(200px, 60vh, 560px);
+      width: auto;
+      cursor: grab;
+    }
+    .stage:active { cursor: grabbing; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    #status { font-size: 12px; color: #888; }
+
+    .controls {
+      display: flex;
+      gap: 24px;
+      font-size: 11px;
+      color: #333;
+      align-items: center;
+    }
+    label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    input[type=range] { width: 80px; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <div class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="status">Loading…</div>
+
+  <div class="controls">
+    <label>
+      Pixel size
+      <input type="range" id="pixelSize" min="1" max="8" value="4" step="1">
+      <span id="pixelVal">4</span>px
+    </label>
+    <label>
+      Grid size
+      <input type="range" id="gridSize" min="1" max="8" value="4" step="1">
+      <span id="gridVal">4</span>px
+    </label>
+    <label>
+      <input type="checkbox" id="animated" checked>
+      Animated
+    </label>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
+
+    const stage  = document.getElementById('stage');
+    const canvas = document.getElementById('canvas');
+    const status = document.getElementById('status');
+
+    // ── Renderer ──────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // ── Scene ─────────────────────────────────────────────────────────
+    const scene  = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+    camera.position.set(0, 0, 4);
+
+    // ── Environment + Lighting ────────────────────────────────────────
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.4;
+    pmrem.dispose();
+
+    const key = new THREE.DirectionalLight(0xffffff, 2.0);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+    fill.position.set(-3, -1, 2);
+    scene.add(fill);
+
+    // ── White Noise Dither Shader ─────────────────────────────────────
+    // White noise = uniform random threshold per dither cell.
+    // Computed analytically via a sin-based hash — no texture needed.
+    // uTime re-seeds the hash each frame when animated mode is on,
+    // producing a TV-static / film-grain crawl over the rotating model.
+    const WhiteNoiseShader = {
+      uniforms: {
+        tDiffuse:    { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uGridSize:   { value: 4.0 },
+        uPixelSize:  { value: 4.0 },
+        uTime:       { value: 0.0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2  uResolution;
+        uniform float uGridSize;
+        uniform float uPixelSize;
+        uniform float uTime;
+        varying vec2 vUv;
+
+        // Classic white noise hash — uniform distribution in [0, 1).
+        // Adding uTime to the seed regenerates the pattern every frame.
+        float whiteNoise(vec2 p) {
+          p += uTime;
+          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+
+        void main() {
+          // Pixelate: snap to nearest block centre
+          vec2 pixCoord = floor(gl_FragCoord.xy / uPixelSize) * uPixelSize + uPixelSize * 0.5;
+          vec4 col  = texture2D(tDiffuse, pixCoord / uResolution);
+
+          // Perceptual luminance (BT.709)
+          float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+          // White noise threshold for this dither cell
+          vec2 gridCoord = floor(gl_FragCoord.xy / uGridSize);
+          float thr = whiteNoise(gridCoord);
+          float d   = step(thr, luma);
+
+          vec3 dark = vec3(18.0/255.0, 25.0/255.0, 31.0/255.0);
+          gl_FragColor = vec4(mix(dark, vec3(1.0), d), 1.0);
+        }
+      `,
+    };
+
+    // ── Post-processing ───────────────────────────────────────────────
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const ditherPass = new ShaderPass(WhiteNoiseShader);
+    ditherPass.renderToScreen = true;
+    composer.addPass(ditherPass);
+
+    // ── Resize ────────────────────────────────────────────────────────
+    function resize() {
+      const w = stage.clientWidth;
+      const h = stage.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+      const pr = renderer.getPixelRatio();
+      ditherPass.uniforms.uResolution.value.set(w * pr, h * pr);
+    }
+    resize();
+    new ResizeObserver(resize).observe(stage);
+
+    // ── Controls ──────────────────────────────────────────────────────
+    document.getElementById('pixelSize').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value);
+      document.getElementById('pixelVal').textContent = v;
+      ditherPass.uniforms.uPixelSize.value = v;
+    });
+    document.getElementById('gridSize').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value);
+      document.getElementById('gridVal').textContent = v;
+      ditherPass.uniforms.uGridSize.value = v;
+    });
+
+    let animated = true;
+    document.getElementById('animated').addEventListener('change', (e) => {
+      animated = e.target.checked;
+    });
+
+    // ── Model ─────────────────────────────────────────────────────────
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const GLB_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb';
+
+    new GLTFLoader().load(
+      GLB_URL,
+      (gltf) => {
+        const model  = gltf.scene;
+        const box    = new THREE.Box3().setFromObject(model);
+        const size   = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const scale  = 2.2 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        group.add(model);
+        status.style.display = 'none';
+      },
+      (xhr) => {
+        if (xhr.total) status.textContent = `Loading… ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+      },
+      (err) => {
+        console.error(err);
+        status.textContent = 'Load failed — needs HTTP server';
+      }
+    );
+
+    // ── Interaction ───────────────────────────────────────────────────
+    const AUTO_VEL = 0.004;
+    let rotX = 0, rotY = 0, tgtX = 0, tgtY = 0;
+    let velY = AUTO_VEL;
+    let dragging = false, dragPrev = { x: 0, y: 0 }, dragVelY = 0, lastMoveT = 0;
+
+    stage.addEventListener('pointerdown', (e) => {
+      dragging = true; dragVelY = 0;
+      dragPrev = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+      stage.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      dragVelY  = (e.clientX - dragPrev.x) * 0.012;
+      tgtY     += dragVelY;
+      tgtX     += (e.clientY - dragPrev.y) * 0.012;
+      dragPrev  = { x: e.clientX, y: e.clientY };
+      lastMoveT = performance.now();
+    });
+    stage.addEventListener('pointerup', () => {
+      dragging = false;
+      velY = (performance.now() - lastMoveT < 120) ? dragVelY : 0;
+    });
+
+    // ── Render loop ───────────────────────────────────────────────────
+    const clock = new THREE.Clock();
+    const NOISE_FPS = 2;           // noise pattern updates per second
+    let lastNoiseFlip = 0;
+    let noiseSeed = 0;
+
+    (function animate() {
+      requestAnimationFrame(animate);
+      if (!dragging) {
+        velY += (AUTO_VEL - velY) * 0.025;
+        tgtY += velY;
+        tgtX *= 0.94;
+      }
+      rotX += (tgtX - rotX) * 0.08;
+      rotY += (tgtY - rotY) * 0.08;
+      group.rotation.x = rotX;
+      group.rotation.y = rotY;
+
+      if (animated) {
+        const now = clock.getElapsedTime();
+        if (now - lastNoiseFlip >= 1 / NOISE_FPS) {
+          noiseSeed += 1;
+          ditherPass.uniforms.uTime.value = noiseSeed;
+          lastNoiseFlip = now;
+        }
+      }
+
+      composer.render();
+    })();
+  </script>
+
+</body>
+</html>
